@@ -2,9 +2,10 @@
 
 /* global d3, topojson */
 
-const RAMP_LIGHT = ['#cde2fb', '#9ec5f4', '#6da7ec', '#3987e5', '#256abf', '#184f95', '#0d366b'];
-// Dark mode: low values recede toward the dark surface, high values glow.
-const RAMP_DARK = ['#104281', '#184f95', '#256abf', '#2a78d6', '#5598e7', '#86b6ef', '#cde2fb'];
+const RAMP_LIGHT = ['#a9cdf6', '#86b6ef', '#6da7ec', '#3987e5', '#256abf', '#184f95', '#0d366b'];
+// Dark mode uses the same direction as light (darker = more titles), but stops at a
+// mid-deep blue so the top countries stay distinct from the near-black background.
+const RAMP_DARK = ['#a9cdf6', '#86b6ef', '#6da7ec', '#4f95e8', '#3987e5', '#256abf', '#184f95'];
 
 export const isDark = () =>
   document.documentElement.dataset.theme === 'dark' ||
