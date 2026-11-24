@@ -85,7 +85,11 @@
           <button type="button" data-lens="setting" aria-pressed="false">Setting</button>
         </div>
       </div>
-      <p id="lens-hint" class="muted small lens-hint"></p>
+    </section>
+
+    <section id="profile" class="profile" hidden aria-label="Account">
+      <h2 id="profile-name" class="profile-name"></h2>
+      <div id="profile-sources" class="profile-sources"></div>
     </section>
 
     <section class="stats" aria-label="Summary">
@@ -96,6 +100,9 @@
 
     <main class="layout">
       <div class="card map-card">
+        <div id="map-head" class="map-head" hidden>
+          <h2 id="map-title" class="map-title"></h2>
+        </div>
         <div id="map" class="map">
           <div id="tooltip" class="tooltip" hidden></div>
           <div id="empty-state" class="empty-state">
@@ -116,6 +123,7 @@
         <div class="side-head">
           <button id="side-back" class="btn ghost small" type="button" hidden>← All countries</button>
           <h2 id="side-title">Countries</h2>
+          <p id="map-note" class="muted small map-note"></p>
         </div>
         <div id="side-content" class="side-content"></div>
       </aside>

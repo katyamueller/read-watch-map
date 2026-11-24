@@ -23,7 +23,7 @@ let worldMap;
 let valid = new Set();
 let countryNames = new Map();
 
-// Map-by buttons per "Show" filter: [button label, "mapped by …" phrase, hint under the buttons].
+// Map-by buttons per "Show" filter: [button label, "mapped by …" phrase, note under the map heading].
 // A lens missing from a filter is hidden.
 const LENSES = {
   both: {
@@ -41,6 +41,17 @@ const LENSES = {
     setting: ['Setting', 'setting', 'Where the story takes place'],
   },
 };
+
+function mapTitle(source, phrase) {
+  const acc = state.prefs.accounts || {};
+  const gr = acc.goodreads?.name;
+  const lb = acc.letterboxd?.name;
+  let subject;
+  if (source === 'book') subject = 'Books';
+  else if (source === 'film') subject = 'Films';
+  else if (gr && lb && gr !== lb) subject = `Books & films`;
+  return `${subject} mapped by ${phrase}`;
+}
 
 // For books, "Author / director" is the same as "Origin" (the author), so they share manual assignments.
 const overrideKey = (key, lens) => `${key}|${lens === 'director' && key.startsWith('b|') ? 'origin' : lens}`;
@@ -102,7 +113,9 @@ function render() {
     if (entry) b.textContent = entry[0];
     b.setAttribute('aria-pressed', b.dataset.lens === lens);
   });
-  $('#lens-hint').textContent = lenses[lens][2];
+  $('#map-head').hidden = !state.items.length;
+  $('#map-title').textContent = mapTitle(source, lenses[lens][1]);
+  $('#map-note').textContent = state.items.length ? lenses[lens][2] : '';
 
   $('#stat-located').textContent = v.located.toLocaleString();
   $('#stat-located-label').textContent = `${unit === 'both' ? 'titles' : unit + 's'} on the map`;
@@ -110,6 +123,7 @@ function render() {
   $('#stat-unmatched').textContent = v.unmatched.length.toLocaleString();
   $('#stat-pending').textContent = v.pending ? `${v.pending.toLocaleString()} still being looked up` : '';
 
+  renderProfile();
   $('#empty-state').hidden = state.items.length > 0;
   $('#switch-user').hidden = state.items.length === 0;
   $('#open-import').textContent = state.items.length ? 'Add data' : 'Import data';
@@ -118,6 +132,35 @@ function render() {
   renderLegend(max, v.counts.size);
   renderSide(v, unit);
   renderUnmatched(v, unit);
+}
+
+const PROFILE_URL = {
+  goodreads: (u) => {
+    const id = (u.match(/(?:user\/show\/|^)(\d+)/) || [])[1];
+    return id ? `https://www.goodreads.com/user/show/${id}` : null;
+  },
+  letterboxd: (u) => `https://letterboxd.com/${encodeURIComponent(u)}/`,
+};
+
+function renderProfile() {
+  // Only the account(s) behind what's shown: Goodreads for books, Letterboxd for films, both for "Both".
+  const { source } = state.prefs;
+  const relevant = source === 'book' ? ['goodreads'] : source === 'film' ? ['letterboxd'] : ['goodreads', 'letterboxd'];
+  const accounts = Object.entries(state.prefs.accounts || {}).filter(([kind]) => relevant.includes(kind));
+  const el = $('#profile');
+  el.hidden = !state.items.length || !accounts.length;
+  if (el.hidden) return;
+  const names = [...new Set(accounts.map(([, a]) => a.name))];
+  $('#profile-name').textContent = names.join(' & ');
+  $('#profile-sources').innerHTML = accounts
+    .map(([kind, a]) => {
+      // Letterboxd shows the @handle; Goodreads only has a numeric ID, so show the name when names differ.
+      const who = kind === 'letterboxd' ? `@${a.user}` : names.length > 1 ? a.name : '';
+      const label = `${kind === 'goodreads' ? '📚 Goodreads' : '🎬 Letterboxd'}${who ? ` · ${esc(who)}` : ''}`;
+      const url = PROFILE_URL[kind](a.user);
+      return url ? `<a class="chip" href="${esc(url)}" target="_blank" rel="noopener">${label}</a>` : `<span class="chip">${label}</span>`;
+    })
+    .join('');
 }
 
 function renderLegend(max, n) {
@@ -249,13 +292,7 @@ async function runEnrich() {
         render();
       },
     });
-    const v = view();
-    setStatus(
-      state.items.length
-        ? `Done. ${v.located.toLocaleString()} titles placed in ${v.counts.size} countries${v.unmatched.length ? `; ${v.unmatched.length} couldn’t be located (you can assign them below)` : ''}.`
-        : '',
-      'ok',
-    );
+    setStatus('');
   } catch (err) {
     console.error(err);
     setStatus(`Lookup stopped: ${err.message}. Already-found results are kept. Try “Retry lookups” in a minute.`, 'error');
@@ -440,6 +477,8 @@ function bind() {
     state.items = [];
     state.selected = null;
     save('items', []);
+    state.prefs.accounts = {};
+    save('prefs', state.prefs);
     $('#gr-user').value = '';
     $('#lb-user').value = '';
     setStatus('');
@@ -453,6 +492,8 @@ function bind() {
     if (!confirm('Remove all imported books, films, lookups and manual assignments from this browser?')) return;
     state.items = [];
     state.cache = emptyCache();
+    state.prefs.accounts = {};
+    save('prefs', state.prefs);
     state.overrides = {};
     state.selected = null;
     ['items', 'cache', 'overrides'].forEach((k) => save(k, k === 'cache' ? state.cache : k === 'items' ? [] : {}));
