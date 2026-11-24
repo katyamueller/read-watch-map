@@ -3,7 +3,7 @@
 A browser app that shows where the books you've read (Goodreads) and the films you've watched (Letterboxd) come from, on a world map.
 
 - **Show:** Books / Films / Both
-- **Map by:** *Author / origin* (author's country, or a film's production country) or *Setting* (where the story takes place)
+- **Map by:** *Origin* (author's country, or a film's production countries), *Author / director* (author's country, or every citizenship and country of birth of a film's directors) or *Setting* (where the story takes place)
 - Hover a country to preview titles, click it to list them all. Scroll or pinch to zoom.
 
 ## Run it
@@ -25,10 +25,10 @@ Imports are merged and de-duplicated, so you can sync again later to add new ent
 
 ## How countries are found
 
-| | Author / origin | Setting |
-|---|---|---|
-| Books | Author's citizenship on Wikidata; falls back to birthplace's present-day country for historical states | Wikidata "narrative location"; falls back to Open Library subject places |
-| Films | Wikidata "country of origin" | Wikidata "narrative location" |
+| | Origin | Author / director | Setting |
+|---|---|---|---|
+| Books | Every citizenship of the author on Wikidata plus the present-day country of their birthplace | Same as Origin | Wikidata "narrative location"; falls back to Open Library subject places |
+| Films | Wikidata "country of origin" | Every director's citizenships plus country of birth | Wikidata "narrative location" |
 
 A title can count for several countries. Anything not found appears under **Not located**, where you can assign a country by hand. Results are cached in `localStorage`, so repeat visits are instant.
 

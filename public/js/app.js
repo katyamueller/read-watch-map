@@ -23,10 +23,27 @@ let worldMap;
 let valid = new Set();
 let countryNames = new Map();
 
-const LENS_HINT = {
-  origin: 'Books: where the author is from · Films: production country',
-  setting: 'Where the story takes place (books & films)',
+// Map-by buttons per "Show" filter: [button label, "mapped by …" phrase, hint under the buttons].
+// A lens missing from a filter is hidden.
+const LENSES = {
+  both: {
+    origin: ['Origin', 'origin', 'Books: where the author is from · Films: production country/countries'],
+    director: ['Author / director', 'author / director', 'Every citizenship and country of birth of the author / director(s)'],
+    setting: ['Setting', 'setting', 'Where the story takes place'],
+  },
+  film: {
+    origin: ['Production', 'production country', 'Several countries may be listed for a single film'],
+    director: ['Director', 'where the director is from', 'Includes every citizenship and the country of birth of each director'],
+    setting: ['Setting', 'setting', 'Where the story takes place'],
+  },
+  book: {
+    origin: ['Author', 'where the author is from', 'Includes every citizenship and the country of birth of each author'],
+    setting: ['Setting', 'setting', 'Where the story takes place'],
+  },
 };
+
+// For books, "Author / director" is the same as "Origin" (the author), so they share manual assignments.
+const overrideKey = (key, lens) => `${key}|${lens === 'director' && key.startsWith('b|') ? 'origin' : lens}`;
 
 function noun(n, source) {
   const word = source === 'book' ? 'book' : source === 'film' ? 'film' : 'title';
@@ -36,10 +53,10 @@ function noun(n, source) {
 // ---------- data view ----------
 
 function countriesFor(item, lens) {
-  const override = state.overrides[`${item.key}|${lens}`];
+  const override = state.overrides[overrideKey(item.key, lens)];
   if (override) return override;
   if (item.type === 'book') {
-    return lens === 'origin' ? state.cache.authors[normName(item.creator)] : state.cache.books[item.key]?.setting;
+    return lens !== 'setting' ? state.cache.authors[normName(item.creator)] : state.cache.books[item.key]?.setting;
   }
   return state.cache.films[item.key]?.[lens];
 }
@@ -70,13 +87,22 @@ function view() {
 // ---------- rendering ----------
 
 function render() {
-  const { source, lens } = state.prefs;
+  const { source } = state.prefs;
+  const lenses = LENSES[source] || LENSES.both;
+  // Books have no "Director" lens: for books it's the same as "Author" (origin).
+  if (!lenses[state.prefs.lens]) state.prefs.lens = 'origin';
+  const { lens } = state.prefs;
   const v = view();
   const unit = source === 'both' ? 'both' : source;
 
   document.querySelectorAll('[data-source]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.source === source));
-  document.querySelectorAll('[data-lens]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.lens === lens));
-  $('#lens-hint').textContent = LENS_HINT[lens];
+  document.querySelectorAll('[data-lens]').forEach((b) => {
+    const entry = lenses[b.dataset.lens];
+    b.hidden = !entry;
+    if (entry) b.textContent = entry[0];
+    b.setAttribute('aria-pressed', b.dataset.lens === lens);
+  });
+  $('#lens-hint').textContent = lenses[lens][2];
 
   $('#stat-located').textContent = v.located.toLocaleString();
   $('#stat-located-label').textContent = `${unit === 'both' ? 'titles' : unit + 's'} on the map`;
@@ -111,7 +137,7 @@ function renderLegend(max, n) {
 }
 
 function itemRow(item, lens, { showOverride = true } = {}) {
-  const manual = state.overrides[`${item.key}|${lens}`];
+  const manual = state.overrides[overrideKey(item.key, lens)];
   const meta = [item.type === 'book' ? item.creator : 'Film', item.year].filter(Boolean).join(' · ');
   const title = item.url ? `<a href="${esc(item.url)}" target="_blank" rel="noopener">${esc(item.title)}</a>` : esc(item.title);
   return `<li class="item">
@@ -324,7 +350,7 @@ function bind() {
     }
     const reset = e.target.closest('[data-reset]');
     if (reset) {
-      delete state.overrides[`${reset.dataset.reset}|${state.prefs.lens}`];
+      delete state.overrides[overrideKey(reset.dataset.reset, state.prefs.lens)];
       save('overrides', state.overrides);
       render();
     }
@@ -338,7 +364,7 @@ function bind() {
   $('#unmatched-list').addEventListener('change', (e) => {
     const sel = e.target.closest('[data-assign]');
     if (!sel || !sel.value) return;
-    state.overrides[`${sel.dataset.assign}|${state.prefs.lens}`] = [sel.value];
+    state.overrides[overrideKey(sel.dataset.assign, state.prefs.lens)] = [sel.value];
     save('overrides', state.overrides);
     render();
   });
@@ -401,7 +427,7 @@ function bind() {
     // Forget "not found" results so they get looked up again.
     for (const section of ['films', 'books']) {
       for (const [k, v] of Object.entries(state.cache[section])) {
-        const vals = section === 'films' ? [v.origin, v.setting] : [v.setting];
+        const vals = section === 'films' ? [v.origin, v.setting, v.director] : [v.setting];
         if (vals.every((x) => !x?.length)) delete state.cache[section][k];
       }
     }

@@ -6,6 +6,7 @@
 //   Book setting  = Wikidata "narrative location" (P840), fallback Open Library subject places
 //   Film origin   = Wikidata "country of origin" (P495)
 //   Film setting  = Wikidata "narrative location" (P840)
+//   Film director = every director's citizenships (P27) + country of birthplace (P19), all combined
 
 import { normName } from './store.js';
 
@@ -186,12 +187,37 @@ async function resolveFilms(films, valid) {
         OPTIONAL { ?film wdt:P495 ?oc . ?oc wdt:P299 ?oiso }
         OPTIONAL { ?film wdt:P840 ?loc . ?loc wdt:P17? ?sc . ?sc wdt:P299 ?siso }
       } GROUP BY ?key ?film ?sl`);
+    const pick = (s) => [...new Set(splitCodes(s).filter((c) => valid.has(c)))];
+    const bestByKey = new Map();
     batch.forEach((f, i) => {
       const best = maxBy(rows.filter((r) => r.key === String(i)), (r) => Number(r.sl));
-      const pick = (s) => [...new Set(splitCodes(s).filter((c) => valid.has(c)))];
-      out[f.key] = { origin: best ? pick(best.o) : [], setting: best ? pick(best.s) : [] };
+      if (best) bestByKey.set(f.key, best);
     });
+    const directors = await directorCountries([...new Set([...bestByKey.values()].map((b) => b.film))]);
+    for (const f of batch) {
+      const best = bestByKey.get(f.key);
+      out[f.key] = {
+        origin: best ? pick(best.o) : [],
+        setting: best ? pick(best.s) : [],
+        director: best ? pick(directors.get(best.film)) : [],
+      };
+    }
   }
+  return out;
+}
+
+// Film entity URI -> space-separated ISO codes from all its directors' citizenships and birth countries.
+async function directorCountries(filmUris) {
+  const out = new Map();
+  if (!filmUris.length) return out;
+  const rows = await sparql(`
+    SELECT ?film (GROUP_CONCAT(DISTINCT ?iso) AS ?codes) WHERE {
+      VALUES ?film { ${filmUris.map((u) => `<${u}>`).join(' ')} }
+      ?film wdt:P57 ?dir .
+      { ?dir wdt:P27 ?c . } UNION { ?dir wdt:P19/wdt:P17 ?c . }
+      ?c wdt:P299 ?iso .
+    } GROUP BY ?film`);
+  for (const r of rows) out.set(r.film, r.codes);
   return out;
 }
 
@@ -220,7 +246,8 @@ export async function enrich(items, cache, valid, { onProgress, onUpdate }) {
     onUpdate();
   }
 
-  const filmsTodo = films.filter((f) => !(f.key in cache.films));
+  // Films cached before director lookups existed have no `director` field yet: look them up again.
+  const filmsTodo = films.filter((f) => cache.films[f.key]?.director === undefined);
   for (const [n, batch] of chunk(filmsTodo, 40).entries()) {
     onProgress(`Looking up films… ${Math.min((n + 1) * 40, filmsTodo.length)}/${filmsTodo.length}`);
     Object.assign(cache.films, await resolveFilms(batch, valid));
