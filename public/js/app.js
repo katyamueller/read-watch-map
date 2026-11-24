@@ -277,8 +277,9 @@ async function handleSync(kind, form) {
   btn.disabled = true;
   setStatus(`Fetching ${kind === 'goodreads' ? 'Goodreads shelf' : 'Letterboxd diary'}…`, 'progress');
   try {
-    const items = kind === 'goodreads' ? await syncGoodreads(user) : await syncLetterboxd(user);
+    const { name, items } = kind === 'goodreads' ? await syncGoodreads(user) : await syncLetterboxd(user);
     state.prefs[`${kind}User`] = user;
+    state.prefs.accounts = { ...state.prefs.accounts, [kind]: { user, name: name || user } };
     save('prefs', state.prefs);
     importItems(items, kind === 'goodreads' ? 'books' : 'films');
   } catch (err) {

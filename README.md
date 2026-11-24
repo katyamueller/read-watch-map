@@ -18,7 +18,7 @@ npm start        # → http://localhost:8080  (PORT=3000 npm start to change)
 
 | Source | Automatic (username) | Full history (file) |
 |---|---|---|
-| Goodreads | User ID or profile URL: fetches your whole "read" shelf via RSS. The profile must be public. | *My Books → Import and export → Export Library* → drop the `.csv` |
+| Goodreads | User ID or profile URL: fetches the 100 books most recently added to your "read" shelf via the public shelf widget (Goodreads retired its RSS feeds in late October 2026). The profile must be public. | *My Books → Import and export → Export Library* → drop the `.csv` |
 | Letterboxd | Username: fetches only the ~50 most recent diary entries (an RSS limit). | *Settings → Data → Export your data* → drop the `.zip` |
 
 Imports are merged and de-duplicated, so you can sync again later to add new entries.

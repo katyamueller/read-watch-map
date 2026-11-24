@@ -1,5 +1,5 @@
-// Tiny zero-dependency server: serves ./public and proxies the Goodreads /
-// Letterboxd RSS feeds (browsers can't fetch them directly because of CORS).
+// Tiny zero-dependency server: serves ./public and proxies the Goodreads shelf widget
+// and Letterboxd RSS feed (browsers can't fetch them directly because of CORS).
 import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -18,7 +18,6 @@ const MIME = {
   '.ico': 'image/x-icon',
 };
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function decodeEntities(s) {
   return s
@@ -46,35 +45,45 @@ async function fetchText(url) {
   return res.text();
 }
 
-// Goodreads: the "read" shelf RSS is paged (100 per page) and covers the full shelf.
+// Goodreads retired its shelf RSS feeds (late Oct 2026). The public shelf widget still works,
+// but returns at most the 100 most recently added books, without read dates.
+// For the full shelf, users upload their CSV export instead.
 async function goodreads(userParam) {
   const id = (String(userParam).match(/(?:user\/show\/|^)(\d+)/) || [])[1];
   if (!id) throw new Error('Enter your numeric Goodreads user ID or profile URL (…/user/show/12345-name).');
-  const books = [];
-  for (let page = 1; page <= 100; page++) {
-    const xml = await fetchText(`https://www.goodreads.com/review/list_rss/${id}?shelf=read&page=${page}`);
-    const pageItems = items(xml);
-    if (!pageItems.length) break;
-    for (const it of pageItems) {
-      books.push({
-        id: tag(it, 'book_id'),
-        title: tag(it, 'title'),
-        author: tag(it, 'author_name'),
-        isbn: tag(it, 'isbn'),
-        year: tag(it, 'book_published'),
-        date: tag(it, 'user_read_at'),
-      });
-    }
-    await sleep(300);
+  const js = await fetchText(
+    `https://www.goodreads.com/review/custom_widget/${id}?shelf=read&num_books=100&cover_position=none&widget_id=1`,
+  );
+  // The widget is a JS snippet holding the HTML as an escaped string literal.
+  const html = js.replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\//g, '/');
+  const text = (s) => decodeEntities((s || '').replace(/<[^>]*>/g, '')).replace(/\s+/g, ' ').trim();
+  // Header looks like "Katya's books".
+  const header = text((html.match(/class="gr_custom_header_1">([\s\S]*?)<\/h2>/) || [])[1]);
+  const name = (header.match(/^(.*?)\s*['’]s books/) || [])[1] || '';
+  const books = html
+    .split('class="gr_custom_each_container_1"')
+    .slice(1)
+    .map((block) => ({
+      id: (block.match(/\/books\/[^"]*?\/(\d+)[._]/) || [])[1] || '',
+      title: text((block.match(/class="gr_custom_title_1">([\s\S]*?)<\/div>/) || [])[1]),
+      author: text((block.match(/class="gr_custom_author_1">\s*by\s*([\s\S]*?)<\/div>/) || [])[1]),
+    }))
+    .filter((b) => b.title);
+  if (!books.length) {
+    throw new Error(
+      'No books found. Check that your Goodreads profile is public and your “read” shelf isn’t empty, or upload your Goodreads export instead.',
+    );
   }
-  return books;
+  return { name, items: books };
 }
 
 // Letterboxd: the RSS feed only holds the most recent ~50 diary entries.
 async function letterboxd(user) {
   if (!/^[A-Za-z0-9_]+$/.test(user || '')) throw new Error('Enter a valid Letterboxd username.');
   const xml = await fetchText(`https://letterboxd.com/${user}/rss/`);
-  return items(xml)
+  // Channel title looks like "Letterboxd - Katya".
+  const name = tag(xml, 'title').replace(/^Letterboxd\s*[-–]\s*/, '');
+  const films = items(xml)
     .filter((it) => it.includes('<letterboxd:filmTitle>'))
     .map((it) => ({
       title: tag(it, 'letterboxd:filmTitle'),
@@ -82,6 +91,7 @@ async function letterboxd(user) {
       date: tag(it, 'letterboxd:watchedDate'),
       url: tag(it, 'link'),
     }));
+  return { name, items: films };
 }
 
 function sendJson(res, status, body) {

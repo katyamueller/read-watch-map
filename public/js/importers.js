@@ -79,13 +79,13 @@ async function api(path) {
 }
 
 export async function syncGoodreads(user) {
-  const rows = await api(`/api/goodreads?user=${encodeURIComponent(user)}`);
-  return rows.map(book);
+  const { name, items } = await api(`/api/goodreads?user=${encodeURIComponent(user)}`);
+  return { name, items: items.map(book) };
 }
 
 export async function syncLetterboxd(user) {
-  const rows = await api(`/api/letterboxd?user=${encodeURIComponent(user)}`);
-  return rows.map(film);
+  const { name, items } = await api(`/api/letterboxd?user=${encodeURIComponent(user)}`);
+  return { name, items: items.map(film) };
 }
 
 export function dedupe(items) {
