@@ -2,7 +2,7 @@
 // All results are ISO 3166-1 numeric codes ("276" = Germany), which match the
 // ids in the world-atlas topojson.
 //
-//   Book origin   = author's citizenship (fallback: country of birthplace)
+//   Book origin   = every citizenship of the author + country of birthplace, all combined
 //   Book setting  = Wikidata "narrative location" (P840), fallback Open Library subject places
 //   Film origin   = Wikidata "country of origin" (P495)
 //   Film setting  = Wikidata "narrative location" (P840)
@@ -82,9 +82,8 @@ async function resolveAuthors(names, valid) {
     }
     for (const name of batch) {
       const best = maxBy(byName.get(name) || [], (r) => Number(r.sl));
-      let codes = best ? splitCodes(best.cit).filter((c) => valid.has(c)) : [];
-      // Historical states (e.g. Kingdom of Great Britain) have no ISO code -> use birthplace's modern country.
-      if (best && !codes.length) codes = splitCodes(best.birth).filter((c) => valid.has(c));
+      // Every citizenship plus the (present-day) country of birth, e.g. Ocean Vuong -> United States + Vietnam.
+      const codes = best ? [...splitCodes(best.cit), ...splitCodes(best.birth)].filter((c) => valid.has(c)) : [];
       out[normName(name)] = [...new Set(codes)];
     }
   }
@@ -205,6 +204,12 @@ async function resolveFilms(films, valid) {
 export async function enrich(items, cache, valid, { onProgress, onUpdate }) {
   const books = items.filter((i) => i.type === 'book');
   const films = items.filter((i) => i.type === 'film');
+
+  // Authors cached under the old rule (birth country only as a fallback) are looked up again once.
+  if (cache.authorRule !== 'citizenship+birth') {
+    cache.authors = {};
+    cache.authorRule = 'citizenship+birth';
+  }
 
   const authors = [...new Set(books.map((b) => b.creator).filter(Boolean))].filter(
     (a) => !(normName(a) in cache.authors),
