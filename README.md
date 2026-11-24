@@ -1,6 +1,6 @@
-# Read & Watch Map
+# Storyglobe
 
-A browser app that shows where the books you've read (Goodreads) and the films you've watched (Letterboxd) come from, on a world map.
+**Map of Stories**: a browser app that shows where the books you've read (Goodreads) and the films you've watched (Letterboxd) come from, on a world map.
 
 - **Show:** Books / Films / Both
 - **Map by:** *Origin* (author's country, or a film's production countries), *Author / director* (author's country, or every citizenship and country of birth of a film's directors) or *Setting* (where the story takes place)

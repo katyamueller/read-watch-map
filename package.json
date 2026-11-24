@@ -1,5 +1,5 @@
 {
-  "name": "read-watch-map",
+  "name": "storyglobe",
   "version": "0.1.0",
   "private": true,
   "description": "Map where the books you read (Goodreads) and films you watched (Letterboxd) come from.",

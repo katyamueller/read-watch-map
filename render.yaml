@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: read-watch-map
+    name: storyglobe
     runtime: node
     plan: free
     buildCommand: "true"

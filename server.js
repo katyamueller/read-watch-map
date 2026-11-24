@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public');
 const PORT = Number(process.env.PORT) || 8080;
-const UA = 'Mozilla/5.0 (read-watch-map; personal use)';
+const UA = 'Mozilla/5.0 (storyglobe; personal use)';
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -121,4 +121,4 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => console.log(`Read & Watch Map running at http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`Storyglobe (Map of Stories) running at http://localhost:${PORT}`));
