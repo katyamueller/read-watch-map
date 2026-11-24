@@ -109,7 +109,11 @@ const server = http.createServer(async (req, res) => {
     const file = path.join(ROOT, rel);
     if (!file.startsWith(ROOT + path.sep)) return sendJson(res, 403, { error: 'Forbidden' });
     const data = await fs.readFile(file);
-    res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream' });
+    res.writeHead(200, {
+      'Content-Type': MIME[path.extname(file)] || 'application/octet-stream',
+      // Always revalidate so new deploys show up without a hard refresh.
+      'Cache-Control': 'no-cache',
+    });
     res.end(data);
   } catch (err) {
     if (err.code === 'ENOENT') return sendJson(res, 404, { error: 'Not found' });
