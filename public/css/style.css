@@ -125,7 +125,9 @@ input[type="text"], select {
 
 /* ---------- import ---------- */
 .import { padding: 18px; display: grid; gap: 14px; }
-.import-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.import-switch { justify-self: start; }
+.import-grid { display: grid; gap: 14px; }
+.source-card[hidden], .dropzone [hidden] { display: none; }
 .source-card { display: grid; gap: 8px; align-content: start; padding: 14px; border-radius: 10px; background: var(--surface-2); }
 .sync-form { display: grid; gap: 4px; }
 .sync-form label { font-size: 0.82rem; color: var(--text-secondary); }

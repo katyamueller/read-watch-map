@@ -21,13 +21,18 @@
       </div>
       <div class="topbar-actions">
         <button id="theme-toggle" class="btn ghost" type="button" aria-label="Toggle colour theme">◐ Auto</button>
+        <button id="switch-user" class="btn ghost" type="button" hidden>← Switch account</button>
         <button id="open-import" class="btn primary" type="button" aria-expanded="false" aria-controls="import-panel">Import data</button>
       </div>
     </header>
 
     <section id="import-panel" class="card import" hidden aria-label="Import data">
+      <div class="segmented import-switch" role="group" aria-label="Import from">
+        <button type="button" data-import="goodreads" aria-pressed="true"><span aria-hidden="true">📚</span> Goodreads</button>
+        <button type="button" data-import="letterboxd" aria-pressed="false"><span aria-hidden="true">🎬</span> Letterboxd</button>
+      </div>
       <div class="import-grid">
-        <div class="source-card">
+        <div class="source-card" data-import-panel="goodreads">
           <h2><span aria-hidden="true">📚</span> Goodreads</h2>
           <form id="gr-form" class="sync-form">
             <label for="gr-user">User ID or profile URL</label>
@@ -39,7 +44,7 @@
           <p class="hint">Imports your whole “read” shelf. Your profile has to be public.
             <br />Or upload your export instead: <em>My Books → Import and export → Export Library</em>.</p>
         </div>
-        <div class="source-card">
+        <div class="source-card" data-import-panel="letterboxd" hidden>
           <h2><span aria-hidden="true">🎬</span> Letterboxd</h2>
           <form id="lb-form" class="sync-form">
             <label for="lb-user">Username</label>
@@ -55,7 +60,8 @@
       <label id="dropzone" class="dropzone">
         <input id="file-input" type="file" accept=".csv,.zip" multiple />
         <strong>Drop export files here</strong> or click to choose:
-        <span class="muted">Goodreads <code>.csv</code>, Letterboxd <code>.zip</code>, <code>watched.csv</code> or <code>diary.csv</code></span>
+        <span class="muted" data-import-panel="goodreads">Goodreads <code>.csv</code> export</span>
+        <span class="muted" data-import-panel="letterboxd" hidden>Letterboxd <code>.zip</code>, <code>watched.csv</code> or <code>diary.csv</code></span>
       </label>
       <p class="hint small">Everything stays in your browser. To find countries, the app sends titles and author names to Wikidata and Open Library.</p>
     </section>

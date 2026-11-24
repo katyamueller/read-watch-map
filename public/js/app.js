@@ -85,6 +85,8 @@ function render() {
   $('#stat-pending').textContent = v.pending ? `${v.pending.toLocaleString()} still being looked up` : '';
 
   $('#empty-state').hidden = state.items.length > 0;
+  $('#switch-user').hidden = state.items.length === 0;
+  $('#open-import').textContent = state.items.length ? 'Add data' : 'Import data';
 
   const max = worldMap.update(v.counts, state.selected);
   renderLegend(max, v.counts.size);
@@ -359,6 +361,19 @@ function bind() {
     e.preventDefault();
     handleSync('letterboxd', e.target);
   });
+  const setImportSource = (src) => {
+    document.querySelectorAll('[data-import]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.import === src));
+    document.querySelectorAll('[data-import-panel]').forEach((el) => (el.hidden = el.dataset.importPanel !== src));
+  };
+  document.querySelectorAll('[data-import]').forEach((b) =>
+    b.addEventListener('click', () => {
+      state.prefs.importSource = b.dataset.import;
+      save('prefs', state.prefs);
+      setImportSource(b.dataset.import);
+    })
+  );
+  setImportSource(state.prefs.importSource === 'letterboxd' ? 'letterboxd' : 'goodreads');
+
   if (state.prefs.goodreadsUser) $('#gr-user').value = state.prefs.goodreadsUser;
   if (state.prefs.letterboxdUser) $('#lb-user').value = state.prefs.letterboxdUser;
 
@@ -392,6 +407,20 @@ function bind() {
     for (const [k, v] of Object.entries(state.cache.authors)) if (!v.length) delete state.cache.authors[k];
     save('cache', state.cache);
     runEnrich();
+  });
+  $('#switch-user').addEventListener('click', () => {
+    if (!confirm('Start over with another account? This removes the titles currently on the map. Country lookups are kept, so re-importing is quick.')) return;
+    state.items = [];
+    state.selected = null;
+    save('items', []);
+    $('#gr-user').value = '';
+    $('#lb-user').value = '';
+    setStatus('');
+    panel.hidden = false;
+    $('#open-import').setAttribute('aria-expanded', 'true');
+    render();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.querySelector('[data-import-panel]:not([hidden]) input')?.focus();
   });
   $('#clear').addEventListener('click', () => {
     if (!confirm('Remove all imported books, films, lookups and manual assignments from this browser?')) return;
