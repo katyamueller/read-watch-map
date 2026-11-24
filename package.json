@@ -1,0 +1,13 @@
+{
+  "name": "read-watch-map",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Map where the books you read (Goodreads) and films you watched (Letterboxd) come from.",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

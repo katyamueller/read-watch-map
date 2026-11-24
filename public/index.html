@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Read &amp; Watch Map</title>
+  <meta name="description" content="See where the books you've read and the films you've watched come from." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌍</text></svg>" />
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <div>
+        <h1>Read &amp; Watch Map</h1>
+        <p class="muted">Where your books and films come from.</p>
+      </div>
+      <div class="topbar-actions">
+        <button id="theme-toggle" class="btn ghost" type="button" aria-label="Toggle colour theme">◐ Auto</button>
+        <button id="open-import" class="btn primary" type="button" aria-expanded="false" aria-controls="import-panel">Import data</button>
+      </div>
+    </header>
+
+    <section id="import-panel" class="card import" hidden aria-label="Import data">
+      <div class="import-grid">
+        <div class="source-card">
+          <h2><span aria-hidden="true">📚</span> Goodreads</h2>
+          <form id="gr-form" class="sync-form">
+            <label for="gr-user">User ID or profile URL</label>
+            <div class="row">
+              <input id="gr-user" type="text" placeholder="e.g. 12345678 or goodreads.com/user/show/…" autocomplete="off" />
+              <button class="btn" type="submit">Sync</button>
+            </div>
+          </form>
+          <p class="hint">Imports your whole “read” shelf. Your profile has to be public.
+            <br />Or upload your export instead: <em>My Books → Import and export → Export Library</em>.</p>
+        </div>
+        <div class="source-card">
+          <h2><span aria-hidden="true">🎬</span> Letterboxd</h2>
+          <form id="lb-form" class="sync-form">
+            <label for="lb-user">Username</label>
+            <div class="row">
+              <input id="lb-user" type="text" placeholder="e.g. davidehrlich" autocomplete="off" />
+              <button class="btn" type="submit">Sync</button>
+            </div>
+          </form>
+          <p class="hint">Syncing only gets your ~50 most recent diary entries. For your full history, go to
+            <em>Settings → Data → Export your data</em> and drop the ZIP file here.</p>
+        </div>
+      </div>
+      <label id="dropzone" class="dropzone">
+        <input id="file-input" type="file" accept=".csv,.zip" multiple />
+        <strong>Drop export files here</strong> or click to choose:
+        <span class="muted">Goodreads <code>.csv</code>, Letterboxd <code>.zip</code>, <code>watched.csv</code> or <code>diary.csv</code></span>
+      </label>
+      <p class="hint small">Everything stays in your browser. To find countries, the app sends titles and author names to Wikidata and Open Library.</p>
+    </section>
+
+    <div id="status" class="status" role="status" hidden></div>
+
+    <section class="controls" aria-label="Filters">
+      <div class="control">
+        <span class="control-label" id="source-label">Show</span>
+        <div class="segmented" role="group" aria-labelledby="source-label">
+          <button type="button" data-source="book" aria-pressed="false">Books</button>
+          <button type="button" data-source="film" aria-pressed="false">Films</button>
+          <button type="button" data-source="both" aria-pressed="false">Both</button>
+        </div>
+      </div>
+      <div class="control">
+        <span class="control-label" id="lens-label">Map by</span>
+        <div class="segmented" role="group" aria-labelledby="lens-label">
+          <button type="button" data-lens="origin" aria-pressed="false">Author / origin</button>
+          <button type="button" data-lens="setting" aria-pressed="false">Setting</button>
+        </div>
+      </div>
+      <p id="lens-hint" class="muted small lens-hint"></p>
+    </section>
+
+    <section class="stats" aria-label="Summary">
+      <div class="stat"><span class="stat-value" id="stat-located">0</span><span class="stat-label" id="stat-located-label">titles on the map</span></div>
+      <div class="stat"><span class="stat-value" id="stat-countries">0</span><span class="stat-label">countries</span></div>
+      <div class="stat"><span class="stat-value" id="stat-unmatched">0</span><span class="stat-label">not located <span id="stat-pending" class="muted"></span></span></div>
+    </section>
+
+    <main class="layout">
+      <div class="card map-card">
+        <div id="map" class="map">
+          <div id="tooltip" class="tooltip" hidden></div>
+          <div id="empty-state" class="empty-state">
+            <p><strong>Your map is empty.</strong><br />Import your Goodreads or Letterboxd data to fill it.</p>
+            <button id="empty-import" class="btn primary" type="button">Import data</button>
+          </div>
+        </div>
+        <div class="map-footer">
+          <div id="legend" class="legend" hidden>
+            <span>1</span><span id="legend-bar" class="legend-bar"></span><span id="legend-max"></span>
+            <span class="muted small">(log scale)</span>
+          </div>
+          <span class="muted small">Scroll or pinch to zoom · drag to pan · click a country</span>
+          <button id="reset-zoom" class="btn ghost small" type="button">Reset zoom</button>
+        </div>
+      </div>
+      <aside id="side" class="card side">
+        <div class="side-head">
+          <button id="side-back" class="btn ghost small" type="button" hidden>← All countries</button>
+          <h2 id="side-title">Countries</h2>
+        </div>
+        <div id="side-content" class="side-content"></div>
+      </aside>
+    </main>
+
+    <details class="card unmatched">
+      <summary>Not located (<span id="unmatched-count">0</span>): assign countries by hand</summary>
+      <p class="hint">Countries you assign here are saved for the current <em>Map by</em> mode.</p>
+      <ul id="unmatched-list" class="items"></ul>
+    </details>
+
+    <footer class="footer muted small">
+      <span>Country data from <a href="https://www.wikidata.org" target="_blank" rel="noopener">Wikidata</a> and <a href="https://openlibrary.org" target="_blank" rel="noopener">Open Library</a>.</span>
+      <span class="footer-actions">
+        <button id="retry" class="btn ghost small" type="button">Retry lookups</button>
+        <button id="clear" class="btn ghost small danger" type="button">Clear all data</button>
+      </span>
+    </footer>
+  </div>
+</body>
+</html>

@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: read-watch-map
+    runtime: node
+    plan: free
+    buildCommand: "true"
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
